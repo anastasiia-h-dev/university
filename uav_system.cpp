@@ -516,7 +516,7 @@ class Pilot{
     private:
         string name, surname;
         int age;
-        string qualification; //сертифікат про проходження якогось курсу на пілота бпла
+        string qualification;
         
 
     public:
@@ -683,7 +683,7 @@ int main(){
         return 1;
     }
     cout << "\n-> Qualification : "; cin >> qualification;
-    if((qualification != "БКР_I") && (qualification != "БКР_II") && (qualification != "БКР_III") && (qualification != "БКР_IV")){
+    if((qualification != "BKR_I") && (qualification != "BKR_II") && (qualification != "BKR_III") && (qualification != "BKR_IV")){
         cout << "\n\033[1;31m[!] Wrong input\033[0m" << endl;
         return 1;
     }
