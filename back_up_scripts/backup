@@ -1,0 +1,50 @@
+#!/bin/bash
+
+RED="\e[31m"
+BLUE="\e[34m"
+NC="\e[0m"
+
+BACKUP_DEST="$HOME/back_up_your_username_$(id -un).tar"
+echo "--- The current system user is: $USER"
+
+printf "\n\n--- Home directory: $HOME"
+
+printf '\n\n--- Files that are owned by that user:'
+
+echo ''
+find $HOME -user $USER -type f
+
+#Archiving files
+FILES_FOR_BACKUP=$(find $HOME -user $USER -type f)
+
+#condition: if backup exists 
+if [ -e $BACKUP_DEST ]; then
+
+printf "\n${RED}[!]${NC} Archive already exists. Do you want to overwrite it? [y/n] "
+read REPLY 
+case "$REPLY" in
+	[Yy]* |“”)
+
+		printf "\n${BLUE}[*]${NC} Overwriting existing backup..."
+		chmod +w $BACKUP_DEST
+		tar -Pcvf $BACKUP_DEST $FILES_FOR_BACKUP 2>/dev/null
+		printf "${BLUE}[+]${NC} Backup has been successfully updated!\n"
+		;;
+	[Nn]*)
+		printf "${BLUE}[-]${NC} Aborting...\n"
+		exit 1
+		;;
+	*)
+
+		printf "\n${RED}[!]${NC} Invalid input. Please enter 'y' or 'n'\n"
+		;;
+esac
+
+#if backup does not exists 
+else
+	printf "\n[*]Backuping files...\n"
+	tar -Pcvf $BACKUP_DEST $FILES_FOR_BACKUP
+	printf "\n${BLUE}[+]${NC} New backup has been successfully done\n"
+fi
+
+chmod 444 $BACKUP_DEST

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+BACKUP_ARCHIVE="$HOME/back_up_your_username_$(id -un).tar"
+
+if [ ! -e "$BACKUP_ARCHIVE" ]; then
+	echo "[-] Backup archive has not been found"
+	exit 1;
+fi
+
+echo "[*] Unarchiving backup..."
+
+files=$(tar -Ptf "$BACKUP_ARCHIVE")
+
+ls $files 2>/dev/null
+
+for file in $files; do
+	
+	target="$file"
+
+	if [ -e "$target" ]; then
+		echo
+		if ! cmp "$target" <(tar -PxOf "$BACKUP_ARCHIVE" "$file"); then
+			read -p "File $file exists and differs. Overwrite? [y/n]" REPLY
+
+			if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+
+				tar -Pxvf "$BACKUP_ARCHIVE" "$file" 
+				printf "[+]File $file has been replaced"
+			fi
+		fi
+	else
+		tar -Pxf "$BACKUP_ARCHIVE" "$file"
+		printf "[+]"$file" has been restored."
+	fi
+done
+
+printf "\n[+]Restoring completed.\n"
