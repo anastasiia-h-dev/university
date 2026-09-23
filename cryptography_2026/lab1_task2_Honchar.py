@@ -7,7 +7,7 @@ import math
 
 f_with_spaces = open("text_w_spaces.txt", "r")
 f_without_spaces = open("text_wo_spaces.txt", "r")
-content_with = "abcdefabcdef"#f_with_spaces.read()
+content_with = "abcdef abcdef"#f_with_spaces.read()
 content_without = "abcdefabcdef"#f_without_spaces.read()
 
 
@@ -35,7 +35,9 @@ def SeparateSymbolFrequency():
     for char, count in count_with.items():
         frequency_ws = count / length__with
         print(f"'{char}' = {count} ->  {frequency_ws:.4f}")
-    
+
+    print("\nСимволи з найбільшими частотами (топ 5) :")
+    print(count_with.most_common(5))
 
     print(decorator)
     print("._________________________________________________.")
@@ -45,6 +47,8 @@ def SeparateSymbolFrequency():
             frequency_wo = count / length__without
             print(f"'{char}' = {count} ->  {frequency_wo:.4f}")
 
+    print("\nСимволи з найбільшими частотами (топ 5) :")
+    print(count_without.most_common(5))
 
 
 def BigramsFrequency():
@@ -61,7 +65,8 @@ def BigramsFrequency():
         bigram_words_freq = count / total_bigrams_1
         print(f"{pair} = {count} -> {bigram_words_freq:.4f}")
 
-    
+    print("\nБіграми з найбільшими частотами (топ 5) :")
+    print(counted_bigram_words.most_common(5))
 
     print(decorator)
     print(".____________________________________________.")
@@ -74,6 +79,8 @@ def BigramsFrequency():
     for bigram, count in counted_bigrams_without_spaces.items():
         frequency_bigrams_wo = count / total_bigrams_2
         print(f"'{bigram}' = {count} -> {frequency_bigrams_wo:.4f}")
+    print("\nБіграми з найбільшими частотами (топ 5) :")
+    print(counted_bigrams_without_spaces.most_common(5))
 
     print(decorator)
     print(".____________________________________________.")
@@ -88,6 +95,8 @@ def BigramsFrequency():
         frequency_bigrams_wo = count / total_bigrams_2
         print(f"'{bigram}' = {count} -> {frequency_bigrams_wo:.4f}")
 
+    print("\nБіграми з найбільшими частотами (топ 5) :")
+    print(counted_bigrams_without_spaces.most_common(5))
 
 
 
@@ -136,5 +145,5 @@ def EntropyBigrams():
 
 #SeparateSymbolFrequency()
 BigramsFrequency()
-EntropySeparateSymbols()
-EntropyBigrams()
+# EntropySeparateSymbols()
+# EntropyBigrams()
