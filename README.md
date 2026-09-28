@@ -1,4 +1,4 @@
-**This is the place where I store all the work assigned by my university, that I consider worth keeping.**
+**This is the place where I store all the work assigned by my university, which I consider worth keeping.**
 
 Here are different types of projects and simple programs:
 
