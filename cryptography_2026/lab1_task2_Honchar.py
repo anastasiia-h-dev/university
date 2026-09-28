@@ -5,10 +5,10 @@ import math
 
 
 
-f_with_spaces = open("text_w_spaces.txt", "r")
-f_without_spaces = open("text_wo_spaces.txt", "r")
-content_with = "abcdef abcdef"#f_with_spaces.read()
-content_without = "abcdefabcdef"#f_without_spaces.read()
+#f_with_spaces = open("text_w_spaces.txt", "r")
+#f_without_spaces = open("text_wo_spaces.txt", "r")
+content_with = "abc abc abc abc"#f_with_spaces.read()
+content_without = "abc abc abc abc"#f_without_spaces.read()
 
 
 count_with = Counter(content_with)
@@ -17,26 +17,15 @@ length__with = len(content_with)
 length__without = len(content_without)
 
 
-total_bigrams_ws_step1 = 0
-total_bigrams_ws_step2 = 0
-total_bigrams_wo_step1 = 0
-total_bigrams_wo_step2 = 0
-
-counted_bigrams_ws_step1 = 0
-counted_bigrams_ws_step2 = 0
-counted_bigrams_wo_step1 = 0
-counted_bigrams_wo_step2 = 0
-
-
 decorator = "\n==========================================================================\n"
 
 
-def SeparateSymbolFrequency(counter_object):
+def SeparateSymbolFrequency(counter_object, total_length):
 # для одиночних символів
 
 
     for char, count in counter_object.items():
-        frequency_ws = count / length__with
+        frequency_ws = count / total_length
         print(f"'{char}' = {count} ->  {frequency_ws:.4f}")
 
     print("\nСимволи з найбільшими частотами (топ 5) :")
@@ -44,89 +33,20 @@ def SeparateSymbolFrequency(counter_object):
 
 
 
-def BigramsFrequencyStep1():
-    global total_bigrams_ws_step1
-    global total_bigrams_wo_step1
-
-    global counted_bigrams_ws_step1
-    global counted_bigrams_wo_step1
-
-    print(decorator)
-    print(".__________________________________________________________________________________.")
-    print("| 2.ЧАСТОТА БІГРАМ (для тексту з пробіліами) : біграми - пари сивмолів, з перетином|")
-    print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
-
-    bigrams_with_spaces = [content_with[i : i + 2] for i in range(0, len(content_with) - 1, 1)]
-    counted_bigrams_ws_step1 = Counter(bigrams_with_spaces)
-    total_bigrams_ws_step1 = sum(counted_bigrams_ws_step1.values())
+def BigramsFrequencyStep1(content, step):
+    bigrams = [content[i : i + 2] for i in range(0, len(content) - 1, step)]
+    counted_bigrams = Counter(bigrams)
+    total_bigrams = sum(counted_bigrams.values())
     
-    for bigram, count in counted_bigrams_ws_step1.items():
-        frequency_bigrams_wo = count / total_bigrams_ws_step1
-        print(f"'{bigram}' = {count} -> {frequency_bigrams_wo:.4f}")
+    for bigram, count in counted_bigrams.items():
+        frequency_bigrams = count / total_bigrams
+        print(f"'{bigram}' = {count} -> {frequency_bigrams:.4f}")
 
     print("\nБіграми з найбільшими частотами (топ 5) :")
-    print(counted_bigrams_ws_step1.most_common(5))
+    print(counted_bigrams.most_common(5))
 
-
-
-    print(decorator)
-    print(".__________________________________________________________________________________.")
-    print("| 2.ЧАСТОТА БІГРАМ (для тексту без пробілів) : біграми - пари сивмолів, з перетином|")
-    print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
-
-    bigrams_without_spaces = [content_without[i : i + 2] for i in range(0, len(content_without) - 1, 1)]
-    counted_bigrams_wo_step1 = Counter(bigrams_without_spaces)
-    total_bigrams_wo_step1 = sum(counted_bigrams_wo_step1.values())
-    
-    for bigram, count in counted_bigrams_wo_step1.items():
-        frequency_bigrams_wo = count / total_bigrams_wo_step1
-        print(f"'{bigram}' = {count} -> {frequency_bigrams_wo:.4f}")
-
-    print("\nБіграми з найбільшими частотами (топ 5) :")
-    print(counted_bigrams_wo_step1.most_common(5))
-
-
-
-def BigramsFrequencyStep2():
-    #для біграм
-    
-    global total_bigrams_ws_step2
-    global total_bigrams_wo_step2
-    
-    global counted_bigrams_ws_step2
-    global counted_bigrams_wo_step2
-
-
-    print(decorator)
-    print(".__________________________________________________________________________________.")
-    print("| 2.ЧАСТОТА БІГРАМ (для тексту з пробілами) : біграми - пари сивмолів, без перетину|")
-    print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
-    bigrams_with_spaces = [content_with[i : i + 2] for i in range(0, len(content_with) - 1, 2)]
-    counted_bigrams_ws_step2 = Counter(bigrams_with_spaces)
-    total_bigrams_ws_step2 = sum(counted_bigrams_ws_step2.values())
-    
-    for bigram, count in counted_bigrams_ws_step2.items():
-        frequency_bigrams_ws = count / total_bigrams_ws_step2
-        print(f"'{bigram}' = {count} -> {frequency_bigrams_ws:.4f}")
-    print("\nБіграми з найбільшими частотами (топ 5) :")
-    print(counted_bigrams_ws_step2.most_common(5))
-
-
-
-    print(decorator)
-    print(".___________________________________________________________________________________.")
-    print("| 2.ЧАСТОТА БІГРАМ (для тексту без пробілів) : біграми - пари сивмолів, без перетину|")
-    print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
-    bigrams_without_spaces = [content_without[i : i + 2] for i in range(0, len(content_without) - 1, 2)]
-    counted_bigrams_wo_step2 = Counter(bigrams_without_spaces)
-    total_bigrams_wo_step2 = sum(counted_bigrams_wo_step2.values())
-    
-    for bigram, count in counted_bigrams_wo_step2.items():
-        frequency_bigrams_wo = count / total_bigrams_wo_step2
-        print(f"'{bigram}' = {count} -> {frequency_bigrams_wo:.4f}")
-    print("\nБіграми з найбільшими частотами (топ 5) :")
-    print(counted_bigrams_wo_step2.most_common(5))
-
+    result = [counted_bigrams, total_bigrams]
+    return result
 
 
 
@@ -143,25 +63,37 @@ def Entropy(counter_obj, total_count, n):
 
 #output
 
-print(decorator)
-print("._________________________________________________.")
-print("| 1. ЧАСТОТА ОКРЕМИХ СИМВОЛІВ (текст з пробілами) |")
-print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
-SeparateSymbolFrequency(count_with)
+# print(decorator)
+# print("._________________________________________________.")
+# print("| 1. ЧАСТОТА ОКРЕМИХ СИМВОЛІВ (текст з пробілами) |")
+# print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
+# SeparateSymbolFrequency(count_with, length__with)
+
+# print(decorator)
+# print("._________________________________________________.")
+# print("| 1. ЧАСТОТА ОКРЕМИХ СИМВОЛІВ (текст без пробілів)|")
+# print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
+# SeparateSymbolFrequency(count_without, length__without)
+
+
+
+bigrams_step1 = BigramsFrequencyStep1(content_with, 1)
+
+#BigramsFrequencyStep2()
+
+# print(decorator)
+# print("._________________________________________________.")
+# print("| 4. ЕНТРОПІЯ H1                                  |")
+# print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
+# print(Entropy(count_with, length__with, 1))
+# print(Entropy(count_without, length__without, 1))
+
 
 print(decorator)
 print("._________________________________________________.")
-print("| 1. ЧАСТОТА ОКРЕМИХ СИМВОЛІВ (текст без пробілів) |")
+print("| 4. ЕНТРОПІЯ H2                                  |")
 print("'‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾'")
-SeparateSymbolFrequency(count_without)
-
-
-
-BigramsFrequencyStep1()
-BigramsFrequencyStep2()
-
-
-print(Entropy(counted_bigrams_ws_step1, total_bigrams_ws_step1, 2))
-print(Entropy(counted_bigrams_ws_step2, total_bigrams_ws_step2, 2))
-print(Entropy(counted_bigrams_wo_step1, total_bigrams_wo_step1, 2))
-print(Entropy(counted_bigrams_wo_step2, total_bigrams_wo_step2, 2))
+print(f"(з пробілами, step=1) : {Entropy(bigrams_step1[0], bigrams_step1[1], 2)}")
+# print(f"(з пробілами, step=2) : {Entropy(counted_bigrams_ws_step2, total_bigrams_ws_step2, 2)}")
+# print(f"(без пробілів, step=1) : {Entropy(counted_bigrams_wo_step1, total_bigrams_wo_step1, 2)}")
+# print(f"(без пробілів, step=2) : {Entropy(counted_bigrams_wo_step2, total_bigrams_wo_step2, 2)}")
