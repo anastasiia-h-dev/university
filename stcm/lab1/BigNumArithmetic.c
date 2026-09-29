@@ -6,10 +6,6 @@
 // int SmallToBigNum(){}
 const bignum ZERO = {0, 0, NULL};
 
-void DecToBin()
-{
- 
-}
 
 bignum AllocateBigNum(unsigned int capacity){
     bignum num;
@@ -20,7 +16,6 @@ bignum AllocateBigNum(unsigned int capacity){
 
     return num;
 }
-
 
 
 bignum StrToBigNum(char* str){
@@ -57,7 +52,7 @@ bignum StrToBigNum(char* str){
         }
 
         aux.cDigits[idx] = remainder;
-        printf("remainder %d\n", remainder);
+        //printf("remainder %d\n", remainder);
 
         int is_zero = 1;
 
@@ -99,15 +94,9 @@ bignum StrToBigNum(char* str){
 }
 
 //// operations
-char Compare(bignum Num1, bignum Num2){
 
-    return 0;
-}
-
-
-
-
-bignum AddBigNums(bignum FirstNum, bignum SecondNum){
+bignum AddBigNums(bignum FirstNum, bignum SecondNum)
+{
 
     unsigned int iMaxNumOfDigits = MAX(FirstNum.iNumOfDigits, SecondNum.iNumOfDigits) + 1;
     //якщо довжини чисел не рівні треба доповнювати нуьовимии байтами
@@ -117,31 +106,59 @@ bignum AddBigNums(bignum FirstNum, bignum SecondNum){
 
     bignum result = AllocateBigNum(iMaxNumOfDigits);
     result.iNumOfDigits = iMaxNumOfDigits;
-
+    printf("\n");
     int carry = 0;
     for(unsigned int idx = 0; idx < result.iNumOfDigits; idx++)
     {
         result.cDigits[idx] = FirstNum.cDigits[idx] ^ SecondNum.cDigits[idx] ^ carry;
-        printf("\naddition %d result[%d] : %d\n", idx, idx, result.cDigits[idx]);
+        printf("%d", result.cDigits[idx]);
+        //printf("addition %d result[%d] : %d\n", idx, idx, result.cDigits[idx]);
         carry = (FirstNum.cDigits[idx] & SecondNum.cDigits[idx]) || ( carry & ( FirstNum.cDigits[idx] ^ SecondNum.cDigits[idx] ));
     }
     return result;
 }
 
 
-
-bignum SubBigNums(bignum FirstNum, bignum SecondNum){
+sub_result SubBigNums(bignum a, bignum b)
+{
     //поки вважаємо, що FirstNum більше за SecondNum за замовчуванням
    
 
-    unsigned int iNumOfDigits = FirstNum.iNumOfDigits;
-
-    bignum result = AllocateBigNum(iNumOfDigits);
-    result.iNumOfDigits = iNumOfDigits;
+    unsigned int iNumOfDigits = a.iNumOfDigits;
+    bignum res = AllocateBigNum(iNumOfDigits);
+    res.iNumOfDigits = iNumOfDigits;
     
     unsigned int borrow = 0;
-//
+    printf("\nsubtruction result\n");
+    for (unsigned int idx = 0; idx < res.iNumOfDigits; idx++)
+    {
+        res.cDigits[idx] = a.cDigits[idx] ^ b.cDigits[idx] ^ borrow;
+        printf("%d",res.cDigits[idx]);
+        borrow = (!(a.cDigits[idx]) & b.cDigits[idx]) || (borrow & ((!a.cDigits[idx]) ^ b.cDigits[idx]));
+    }
+
+    sub_result result;
+    result.bNum = res;
+    result.borrow = borrow;
     return result;
+}
+
+
+int Compare(bignum a, bignum b) 
+{
+    sub_result result = SubBigNums(a, b);
+
+    if (result.borrow == 1)
+    {
+        printf("\na < b");
+        return -1;
+    }
+    else if (result.borrow == 0)
+    {
+        printf("\na = b, or a > b");
+        return 0; //ніпанятна чи a == b, чи a > b
+    }
+    return 0;
 }
 
 
