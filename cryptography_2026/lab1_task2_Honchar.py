@@ -6,19 +6,21 @@ import math
 
 #тут просто реалізовані функції
 #думаю, що ще й вивід результатів сюди вставляти не варто
-#для виводу краще виділити окремий файл
+#для виводу у мене окремий файл "part2_output.py"
 
 
 
-#функції треба дати тільки текст, та його довжину
-#див. приклад використання в іншому файлі
-def SeparateSymbolFrequency(content, total_length):
-    for char, count in content.items():
-        frequency_ws = count / total_length
-        print(f"'{char}' = {count} ->  {frequency_ws:.4f}")
+#треба передати або стрічку, або дескриптор відкритого файлу
+#тобто або content = "abcdef"
+#або content = open("text.txt", "r")
+def SeparateSymbolFrequency(content):
+    total_length = len(content)
+    count = Counter(content)
+    for c,q in count.items():
+        frequency = q / total_length
+        print(f"'{c}' = {q} ->  {frequency:.4f}")
 
-    print("\nСимволи з найбільшими частотами (топ 5) :")
-    print(content.most_common(5))
+    return count.most_common(5)
 
 
 
@@ -34,10 +36,7 @@ def BigramsFrequency(content, step):
         frequency_bigrams = count / total_bigrams
         print(f"'{bigram}' = {count} -> {frequency_bigrams:.4f}")
 
-    print("\nБіграми з найбільшими частотами (топ 5) :")
-    print(counted_bigrams.most_common(5))
-
-    result = [counted_bigrams, total_bigrams]
+    result = [counted_bigrams, total_bigrams, counted_bigrams.most_common(5)]
     return result
 
 
