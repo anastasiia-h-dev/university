@@ -183,6 +183,7 @@ bignum StrHexToBignum(char* hex_str)
                 result.uLimbs[idx] = (result.uLimbs[idx] << 4) | hex_byte;
                 i++;
             }
+            continue;
         }
 
         for (int j = 0; j < 8; j++)
@@ -457,6 +458,7 @@ int MSB(const bignum *a)
     //the amount of shifts will be the amount of bits
 
     int count = 0;
+    if (a->iNumOfLimbs == 0) return -1;
     uint32_t top_limb = a->uLimbs[a->iNumOfLimbs - 1];
     while ( top_limb != 0)
     {
@@ -465,7 +467,7 @@ int MSB(const bignum *a)
 
     }
 
-    int length = (a->iNumOfLimbs * 32 - 1) * 32;
+    int length = (a->iNumOfLimbs - 1) * 32 + count - 1;
     return length - 1;
 }
 
@@ -599,6 +601,7 @@ div_result LongDivBignum(bignum a, bignum b)
         sub_result subres;
         subres = SubBigNums(&r, &c);
         r = subres.diff;
+        free(c.uLimbs);
         unsigned int bit = 0;
         SetBit(&q, t - k , 1);
     }
