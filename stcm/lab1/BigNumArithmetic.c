@@ -3,7 +3,7 @@
 //TODO:
 //2) шістнадцяткове представлення
 
-//my implementation is fixed or dynamic???....
+
 
 bignum ZERO = { 0,0,0 };
 
