@@ -1,21 +1,36 @@
 
-#include <windows.h>
-#include <stdio.h>
-#include <vector>
+
 #include "interaction.h"
 
+void RegisterChildClass(void);
 
-
-HWND hPath, hTextContents, hMatrix, hIfExists, hNumOfColumn, Sum1, Sum2;
+HWND hPath, hTextContents, hAdvanced;
+HWND hUser, hGroup, hObject;
+HWND ReadCheck, WriteCheck;
 
 #define PUSHBUTTON 1
+#define ADVANCED 2
+#define ID_CHILD 3
+#define APPLY 4
 
+
+
+
+const wchar_t* CLASS_NAME = L"Desktop_Window";
+wchar_t pszObjName;
+wchar_t pszTrustee;
+DWORD dwAccessRights;
 
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void AddButton(HWND hWnd);
 void AddStatic(HWND hWnd);
 void AddEdit(HWND hWnd);
+
+void AddButtonChild(HWND hWnd);
+void AddStaticChild(HWND hWnd);
+void AddEditChild(HWND hWnd);
+void AddCheckBox(HWND hWnd);
 
 
 int WINAPI WinMain(
@@ -26,7 +41,7 @@ int WINAPI WinMain(
 )
 {
     WNDCLASS _class = { 0 };
-    const wchar_t* CLASS_NAME = L"Desktop_Window";
+    
     _class.lpfnWndProc = WndProc;
     _class.hInstance = hInstance;
     _class.hCursor = LoadCursor(NULL, IDC_ARROW);
@@ -45,16 +60,16 @@ int WINAPI WinMain(
     HWND hWnd = CreateWindow(
         CLASS_NAME,
         L"Lab2 Admin Panel",
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        100, 100,
         800, 800,
-        NULL,
-        NULL,
+        0,
+        0,
         hInstance,
-        NULL
+        0
     );
-    ::ShowWindow(hWnd, nCmdShow);
-    ::UpdateWindow(hWnd);
+    //::ShowWindow(hWnd, nCmdShow);
+    //::UpdateWindow(hWnd);
 
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0))
@@ -74,16 +89,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         AddButton(hWnd);
         AddStatic(hWnd);
         AddEdit(hWnd);
+        RegisterChildClass();
+
+        
         break;
     case WM_COMMAND:
         switch (wParam) {
         case PUSHBUTTON:
+            SetWindowTextW(hTextContents, NULL);
+
             char hFilePath[MAX_PATH];
             CheckPermissions(hFilePath, hPath, hTextContents);
-
             //SetWindowTextA(hIfExists, hFilePath);
             break;
+        case ADVANCED:
+            CreateChildWindow(hWnd);
+            break;
         }
+
             break;
         
 
@@ -100,7 +123,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 
-
 void AddButton(HWND hWnd) {
     CreateWindow(
         L"BUTTON",
@@ -113,12 +135,24 @@ void AddButton(HWND hWnd) {
         NULL,
         NULL
     );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Advanced",
+        WS_TABSTOP | BS_DEFPUSHBUTTON | WS_VISIBLE | WS_CHILD,
+        200, 460,
+        150, 20,
+        hWnd,
+        (HMENU)ADVANCED,
+        NULL,
+        NULL
+    );
 }
 
 void AddStatic(HWND hWnd) {
     CreateWindow(
         L"STATIC",
-        L"Enter path to the file ->",
+        L"Enter path to the object ->",
         WS_VISIBLE | WS_CHILD,
         10, 10,
         340, 20,
@@ -133,78 +167,6 @@ void AddStatic(HWND hWnd) {
         L"Contents of the file will appear here",
         WS_VISIBLE | WS_CHILD | WS_BORDER,
         10, 85,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    CreateWindow(
-        L"STATIC",
-        L"...The matrix will appear here...",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        360, 85,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    CreateWindow(
-        L"STATIC",
-        L"RESULTS",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        10, 500,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    CreateWindow(
-        L"STATIC",
-        L"Column (exists/not exists): ",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        10, 530,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    CreateWindow(
-        L"STATIC",
-        L"Number of the column (if exists): ",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        10, 560,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    CreateWindow(
-        L"STATIC",
-        L"Sum of the left part : ",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        10, 590,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    CreateWindow(
-        L"STATIC",
-        L"Sum of the right part : ",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        10, 620,
         340, 20,
         hWnd,
         NULL,
@@ -229,7 +191,7 @@ void AddEdit(HWND hWnd) {
     hTextContents = CreateWindow(
         L"EDIT",
         L"",
-        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE,
+        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | WS_VSCROLL,
         10, 110,
         340, 340,
         hWnd,
@@ -237,64 +199,192 @@ void AddEdit(HWND hWnd) {
         NULL,
         NULL
     );
+}
 
-    hMatrix = CreateWindow(
-        L"EDIT",
-        L"",
-        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE,
-        360, 110,
-        340, 340,
+void CreateChildWindow(HWND hParent)
+{
+
+
+    HWND hWnd = CreateWindow(
+        L"ChildClass",
+        L"Advanced Settings",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        100, 100,
+        300, 500,
+        hParent,
+        0,
+        NULL,
+        0
+    );
+
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    //return (int)msg.wParam;
+ 
+}
+
+LRESULT CALLBACK PanelProc(HWND hWnd, UINT msg,
+    WPARAM wParam, LPARAM lParam) {
+    ACCESS_MASK mask;
+    switch (msg) {
+    case WM_CREATE:
+        AddButtonChild(hWnd);
+        AddStaticChild(hWnd);
+        AddEditChild(hWnd);
+        AddCheckBox(hWnd);
+        break;
+        
+    case WM_COMMAND:
+        switch (wParam)
+        {
+        case APPLY:
+            MessageBoxW(hWnd, L"Hi", L"asd", MB_OK);
+            ExtractText(hUser, &pszObjName);
+            ExtractText(hObject, &pszTrustee);
+            mask = CheckCheckbox(hWnd);
+            SetPermissions(&pszObjName, &pszTrustee, mask);
+            break;
+        }
+        break;
+
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    default:
+        return DefWindowProc(hWnd, msg, wParam, lParam);
+        break;
+    }
+
+    return 0;
+}
+
+
+void RegisterChildClass(void) {
+
+    WNDCLASSW rwc = { 0 };
+
+    rwc.lpszClassName = L"ChildClass";
+    rwc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    rwc.lpfnWndProc = PanelProc;
+    rwc.hCursor = LoadCursor(0, IDC_ARROW);
+
+    if (!RegisterClass(&rwc))
+    {
+        MessageBoxW(NULL,
+            L"Call to RegisterClass failed!",
+            L"Failed",
+            NULL);
+        return;
+    }
+}
+
+
+void AddButtonChild(HWND hWnd) {
+    CreateWindow(
+        L"BUTTON",
+        L"Apply",
+        WS_TABSTOP | BS_DEFPUSHBUTTON | WS_VISIBLE | WS_CHILD,
+        10, 250,
+        150, 20,
+        hWnd,
+        (HMENU)APPLY,
+        NULL,
+        NULL
+    );
+}
+
+void AddStaticChild(HWND hWnd) {
+    CreateWindow(
+        L"STATIC",
+        L"Enter username/group:",
+        WS_VISIBLE | WS_CHILD | WS_BORDER,
+        10, 10,
+        200, 20,
         hWnd,
         NULL,
         NULL,
         NULL
     );
 
-    hIfExists = CreateWindow(
-        L"EDIT",
-        L"",
+    CreateWindow(
+        L"STATIC",
+        L"Enter path to the file/folder : ",
         WS_VISIBLE | WS_CHILD | WS_BORDER,
-        360, 530,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    hNumOfColumn = CreateWindow(
-        L"EDIT",
-        L"",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        360, 560,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    Sum1 = CreateWindow(
-        L"EDIT",
-        L"",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        360, 590,
-        340, 20,
-        hWnd,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    Sum2 = CreateWindow(
-        L"EDIT",
-        L"",
-        WS_VISIBLE | WS_CHILD | WS_BORDER,
-        360, 620,
-        340, 20,
+        10, 65,
+        200, 20,
         hWnd,
         NULL,
         NULL,
         NULL
     );
 }
+
+void AddEditChild(HWND hWnd) {
+    hUser = CreateWindow(
+        L"EDIT",
+        L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER,
+        10, 35,
+        250, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    hObject = CreateWindow(
+        L"EDIT",
+        L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER,
+        10, 90,
+        250, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL
+    );
+}
+
+void AddCheckBox(HWND hWnd)
+{
+    CreateWindow(
+        L"BUTTON",
+        L"Create Files/WriteData",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 125,
+        200, 20,
+        hWnd,
+        (HMENU)CREATE,
+        NULL,
+        NULL
+    );
+
+    WriteCheck = CreateWindow(
+        L"BUTTON",
+        L"Write Attributes",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 150,
+        200, 20,
+        hWnd,
+        (HMENU)WRITE,
+        NULL,
+        NULL
+    );
+
+    ReadCheck = CreateWindow(
+        L"BUTTON",
+        L"Read Permissions",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 175,
+        200, 20,
+        hWnd,
+        (HMENU)READ,
+        NULL,
+        NULL
+    );
+}
+
