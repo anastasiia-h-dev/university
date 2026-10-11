@@ -1,5 +1,8 @@
 #include "interaction.h"
 
+#pragma comment(lib, "credui.lib")
+
+
 //TODO:
 //- make function to set rights to users: Everyone and Anonymous
 
@@ -193,6 +196,82 @@ int CheckPermissions(HWND hWindow, HWND hAnotherWindow)
 
 
 
+void SetPermissions(wchar_t* pszObjName, wchar_t* pszTrustee, DWORD dwAccessRights)
+{
+    //wchar_t pszObjName[] = L"D:\\Downloads\\стзв\\systeminfo.txt";
+    SE_OBJECT_TYPE ObjectType = SE_FILE_OBJECT;
+    //wchar_t pszTrustee[] = L"user1";
+    TRUSTEE_FORM TrusteeForm = TRUSTEE_IS_NAME;
+    //DWORD dwAccessRights = SPECIFIC_RIGHTS_ALL;
+    ACCESS_MODE AccessMode = SET_ACCESS;
+
+    AddAceToObjectsSecurityDescriptor(pszObjName, ObjectType, pszTrustee, TrusteeForm, dwAccessRights, AccessMode);
+
+}
+
+
+DWORD AddAceToObjectsSecurityDescriptor(
+    LPTSTR pszObjName,          // name of object
+    SE_OBJECT_TYPE ObjectType,  // type of object
+    LPTSTR pszTrustee,          // trustee for new ACE
+    TRUSTEE_FORM TrusteeForm,   // format of trustee structure
+    DWORD dwAccessRights,       // access mask for new ACE
+    ACCESS_MODE AccessMode     // type of ACE
+    //DWORD dwInheritance         // inheritance flags for new ACE
+)
+{
+    DWORD dwRes = 0;
+    PACL pOldDACL = NULL, pNewDACL = NULL;
+    PSECURITY_DESCRIPTOR pSD = NULL;
+    EXPLICIT_ACCESS ea;
+
+    char buffer[256];
+    if (NULL == pszObjName)
+        return ERROR_INVALID_PARAMETER;
+
+
+    dwRes = GetNamedSecurityInfo(pszObjName, ObjectType,
+        DACL_SECURITY_INFORMATION,
+        NULL, NULL, &pOldDACL, NULL, &pSD);
+    if (ERROR_SUCCESS != dwRes) {
+        sprintf_s(buffer, 256, "GetNamedSecurityInfo Error %d\n", dwRes);
+        MessageBoxA(NULL, buffer, "Error", MB_OK | MB_ICONERROR);
+        goto Cleanup;
+    }
+
+    ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+    ea.grfAccessPermissions = dwAccessRights;
+    ea.grfAccessMode = AccessMode;
+    //ea.grfInheritance = dwInheritance;
+    ea.Trustee.TrusteeForm = TrusteeForm;
+    ea.Trustee.ptstrName = pszTrustee;
+
+    dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
+    if (ERROR_SUCCESS != dwRes) {
+        sprintf_s(buffer, 256, "SetEntriesInAcl Error %u\n", dwRes);
+        MessageBoxA(NULL, buffer, "Error", MB_OK | MB_ICONERROR);
+        goto Cleanup;
+    }
+
+    dwRes = SetNamedSecurityInfo(pszObjName, ObjectType,
+        DACL_SECURITY_INFORMATION,
+        NULL, NULL, pNewDACL, NULL);
+    if (ERROR_SUCCESS != dwRes) {
+        sprintf_s(buffer, 256, "SetNamedSecurityInfo Error %u\n", dwRes);
+        MessageBoxA(NULL, buffer, "Error", MB_OK | MB_ICONERROR);
+        goto Cleanup;
+    }
+
+Cleanup:
+
+    if (pSD != NULL)
+        LocalFree((HLOCAL)pSD);
+    if (pNewDACL != NULL)
+        LocalFree((HLOCAL)pNewDACL);
+
+    return dwRes;
+}
+
 void SetAttribute(wchar_t *object, int attr)
 {
     if (SetFileAttributes(object, attr))
@@ -369,5 +448,53 @@ void DisplayOwner(wchar_t* object, HWND hOut)
     if (pSD != NULL)
     {
         LocalFree((HLOCAL)pSD);
+    }
+}
+
+
+void RequestRights(HWND hWnd, wchar_t *wObject, wchar_t* pszTrustee, ACCESS_MASK mask)
+{
+    CREDUI_INFO cui = {0};
+    cui.cbSize = sizeof(CREDUI_INFO);
+    cui.hwndParent = hWnd;
+    cui.pszMessageText = L"Enter admin creds : ";
+    cui.pszCaptionText = L"Request to gain higher rights";
+    cui.hbmBanner = NULL;
+
+    WCHAR wUser[256] = {0};
+    WCHAR wPassword[256] = { 0 };
+    BOOL bSave = FALSE;
+
+    DWORD result = CredUIPromptForCredentialsW(
+        &cui,
+        L"LocalAdminElevation",
+        NULL,
+        0,
+        wUser,
+        256,
+        wPassword,
+        256,
+        &bSave,
+        CREDUI_FLAGS_GENERIC_CREDENTIALS | CREDUI_FLAGS_DO_NOT_PERSIST
+    );
+
+    if (result == NO_ERROR)
+    {
+        HANDLE hAdminToken = NULL;
+        if (LogonUserW(wUser, L".", wPassword, LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, &hAdminToken))
+        {
+            if (ImpersonateLoggedOnUser(hAdminToken))
+            {
+                //set permissions for the object
+                SetPermissions(wObject, pszTrustee, mask);
+                RevertToSelf();
+                MessageBoxW(NULL, L"Rights successfully changed", L"Success", MB_OK | MB_ICONINFORMATION);
+            }
+            CloseHandle(hAdminToken);
+        }
+
+        else {
+            MessageBoxW(NULL, L"Login or passwords are incorrect", L"Invalid credentials", MB_OK | MB_ICONEXCLAMATION);
+        }
     }
 }
