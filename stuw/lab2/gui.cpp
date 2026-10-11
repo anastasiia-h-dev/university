@@ -8,17 +8,10 @@ HWND hPath, hTextContents, hAdvanced;
 HWND hUser, hGroup, hObject;
 HWND ReadCheck, WriteCheck;
 
-#define PUSHBUTTON 1
-#define ADVANCED 2
-#define ID_CHILD 3
-#define APPLY 4
-
-
-
 
 const wchar_t* CLASS_NAME = L"Desktop_Window";
-wchar_t pszObjName;
-wchar_t pszTrustee;
+wchar_t pszObjName[MAX_PATH];
+wchar_t pszTrustee[256];
 DWORD dwAccessRights;
 
 
@@ -62,7 +55,7 @@ int WINAPI WinMain(
         L"Lab2 Admin Panel",
         WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         100, 100,
-        800, 800,
+        375, 530,
         0,
         0,
         hInstance,
@@ -98,8 +91,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case PUSHBUTTON:
             SetWindowTextW(hTextContents, NULL);
 
-            char hFilePath[MAX_PATH];
-            CheckPermissions(hFilePath, hPath, hTextContents);
+            CheckPermissions(hPath, hTextContents);
             //SetWindowTextA(hIfExists, hFilePath);
             break;
         case ADVANCED:
@@ -126,9 +118,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 void AddButton(HWND hWnd) {
     CreateWindow(
         L"BUTTON",
-        L"CLICK",
+        L"Check",
         WS_TABSTOP | BS_DEFPUSHBUTTON | WS_VISIBLE | WS_CHILD,
-        300, 35,
+        250, 60,
         100, 20,
         hWnd,
         (HMENU)PUSHBUTTON,
@@ -152,10 +144,10 @@ void AddButton(HWND hWnd) {
 void AddStatic(HWND hWnd) {
     CreateWindow(
         L"STATIC",
-        L"Enter path to the object ->",
+        L"Enter path to the object:",
         WS_VISIBLE | WS_CHILD,
         10, 10,
-        340, 20,
+        240, 20,
         hWnd,
         NULL,
         NULL,
@@ -164,7 +156,7 @@ void AddStatic(HWND hWnd) {
 
     CreateWindow(
         L"STATIC",
-        L"Contents of the file will appear here",
+        L"Permissions : ",
         WS_VISIBLE | WS_CHILD | WS_BORDER,
         10, 85,
         340, 20,
@@ -178,9 +170,9 @@ void AddStatic(HWND hWnd) {
 void AddEdit(HWND hWnd) {
     hPath = CreateWindow(
         L"EDIT",
-        L"...enter path here...",
+        L"",
         WS_VISIBLE | WS_CHILD | WS_BORDER,
-        360, 10,
+        10, 35,
         340, 20,
         hWnd,
         NULL,
@@ -241,16 +233,39 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT msg,
     case WM_COMMAND:
         switch (wParam)
         {
-        case APPLY:
-            MessageBoxW(hWnd, L"Hi", L"asd", MB_OK);
-            ExtractText(hUser, &pszObjName);
-            ExtractText(hObject, &pszTrustee);
-            mask = CheckCheckbox(hWnd);
-            SetPermissions(&pszObjName, &pszTrustee, mask);
+        case APPLY_TO_FILE:
+
+            if (ExtractText(hObject, pszObjName) == 1)
+            {
+                MessageBoxA(hObject, "Enter path to the file/folder", "Path error", MB_OK | MB_ICONEXCLAMATION);
+                break;
+            }
+            if (ExtractText(hUser, pszTrustee) == 1)
+            {
+                MessageBoxA(hUser, "Enter username/group", "Name error", MB_OK | MB_ICONEXCLAMATION);
+                break;
+            }
+            mask = CheckFileMask(hWnd);
+            SetPermissions(pszObjName, pszTrustee, mask);
+            break;
+
+        case APPLY_TO_DIR:
+
+            if (ExtractText(hObject, pszObjName) == 1)
+            {
+                MessageBoxA(hObject, "Enter path to the file/folder", "Path error", MB_OK | MB_ICONEXCLAMATION);
+                break;
+            }
+            if (ExtractText(hUser, pszTrustee) == 1)
+            {
+                MessageBoxA(hUser, "Enter username/group", "Name error", MB_OK | MB_ICONEXCLAMATION);
+                break;
+            }
+            mask = CheckDirMask(hWnd);
+            SetPermissions(pszObjName, pszTrustee, mask);
             break;
         }
         break;
-
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
@@ -288,14 +303,26 @@ void AddButtonChild(HWND hWnd) {
         L"BUTTON",
         L"Apply",
         WS_TABSTOP | BS_DEFPUSHBUTTON | WS_VISIBLE | WS_CHILD,
-        10, 250,
-        150, 20,
+        10, 225,
+        100, 20,
         hWnd,
-        (HMENU)APPLY,
+        (HMENU)APPLY_TO_FILE,
+        NULL,
+        NULL
+    );
+    CreateWindow(
+        L"BUTTON",
+        L"Apply",
+        WS_TABSTOP | BS_DEFPUSHBUTTON | WS_VISIBLE | WS_CHILD,
+        10, 380,
+        100, 20,
+        hWnd,
+        (HMENU)APPLY_TO_DIR,
         NULL,
         NULL
     );
 }
+
 
 void AddStaticChild(HWND hWnd) {
     CreateWindow(
@@ -307,8 +334,7 @@ void AddStaticChild(HWND hWnd) {
         hWnd,
         NULL,
         NULL,
-        NULL
-    );
+        NULL);
 
     CreateWindow(
         L"STATIC",
@@ -319,8 +345,29 @@ void AddStaticChild(HWND hWnd) {
         hWnd,
         NULL,
         NULL,
-        NULL
-    );
+        NULL);
+
+    CreateWindow(
+        L"STATIC",
+        L"File permissions : ",
+        WS_VISIBLE | WS_CHILD,
+        10, 125,
+        200, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL);
+
+    CreateWindow(
+        L"STATIC",
+        L"Directory permissions : ",
+        WS_VISIBLE | WS_CHILD,
+        10, 260,
+        200, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL);
 }
 
 void AddEditChild(HWND hWnd) {
@@ -353,36 +400,84 @@ void AddCheckBox(HWND hWnd)
 {
     CreateWindow(
         L"BUTTON",
-        L"Create Files/WriteData",
+        L"Write to files",
         WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
-        10, 125,
-        200, 20,
+        10, 150,
+        250, 20,
         hWnd,
         (HMENU)CREATE,
         NULL,
         NULL
     );
 
-    WriteCheck = CreateWindow(
+    CreateWindow(
         L"BUTTON",
-        L"Write Attributes",
+        L"Change Attributes",
         WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
-        10, 150,
-        200, 20,
+        10, 175,
+        250, 20,
         hWnd,
         (HMENU)WRITE,
         NULL,
         NULL
     );
 
-    ReadCheck = CreateWindow(
+    CreateWindow(
         L"BUTTON",
-        L"Read Permissions",
+        L"Read Permissions/Owners",
         WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
-        10, 175,
-        200, 20,
+        10, 200,
+        250, 20,
         hWnd,
         (HMENU)READ,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Read file Permissions/Owners",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 285,
+        250, 20,
+        hWnd,
+        (HMENU)DIR_READ_OWNER,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Create files/subdirectories",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 305,
+        250, 20,
+        hWnd,
+        (HMENU)DIR_CREATE,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Change directory attributes",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 330,
+        250, 20,
+        hWnd,
+        (HMENU)DIR_WRITE_ATTR,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Read directory Permissions/Owners",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 355,
+        250, 20,
+        hWnd,
+        (HMENU)DIR_READ_PERM,
         NULL,
         NULL
     );
