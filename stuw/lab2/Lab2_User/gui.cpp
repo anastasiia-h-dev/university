@@ -2,7 +2,6 @@
 
 #include "interaction.h"
 
-void RegisterChildClass(void);
 
 HWND hPath, hTextContents, hAttribute;
 HWND hUser, hGroup, hObject;
@@ -77,14 +76,14 @@ int WINAPI WinMain(
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-
     switch (message)
     {
     case WM_CREATE:
         AddButton(hWnd);
         AddStatic(hWnd);
         AddEdit(hWnd);
- 
+        RegisterChildClass();
+
         
         break;
     case WM_COMMAND:
@@ -93,8 +92,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             SetWindowTextW(hTextContents, NULL);
             ExtractText(hPath, pszObjName);
 
-            CheckPermissions(hPath, hTextContents);
-            //CheckFileAttr(pszObjName, hTextContents);
+            CheckFileAttr(pszObjName, hTextContents);
             break;
         case SET_ATTR:
             ExtractText(hPath, pszObjName);
@@ -106,7 +104,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             ExtractText(hPath, pszObjName);
             TraverseFolder(pszObjName, hTextContents);
             break;
+        case ADVANCED:
+            //MessageBoxA(hObject, "Enter path to the file/folder", "Path error", MB_OK | MB_ICONEXCLAMATION);
+
+            CreateChildWindow(hWnd);
+            break;
+
+        case CHECK_PERM:
+            SetWindowTextW(hTextContents, NULL);
+            CheckPermissions(hPath, hTextContents);
+
+            break;
         }
+
 
             break;
         
@@ -169,6 +179,18 @@ void AddButton(HWND hWnd) {
         150, 20,
         hWnd,
         (HMENU)SET_ATTR,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Advanced",
+        WS_TABSTOP | BS_DEFPUSHBUTTON | WS_VISIBLE | WS_CHILD,
+        200, 540,
+        150, 20,
+        hWnd,
+        (HMENU)ADVANCED,
         NULL,
         NULL
     );
@@ -237,3 +259,303 @@ void AddEdit(HWND hWnd) {
         NULL
     );
 }
+
+
+
+
+
+///CHILD WINDOW
+
+
+void AddButtonChild(HWND hWnd) {
+    CreateWindow(
+        L"BUTTON",
+        L"Apply",
+        WS_TABSTOP | BS_DEFPUSHBUTTON | WS_VISIBLE | WS_CHILD,
+        10, 225,
+        100, 20,
+        hWnd,
+        (HMENU)APPLY_TO_FILE,
+        NULL,
+        NULL
+    );
+    CreateWindow(
+        L"BUTTON",
+        L"Apply",
+        WS_TABSTOP | BS_DEFPUSHBUTTON | WS_VISIBLE | WS_CHILD,
+        10, 380,
+        100, 20,
+        hWnd,
+        (HMENU)APPLY_TO_DIR,
+        NULL,
+        NULL
+    );
+}
+
+void AddStaticChild(HWND hWnd) {
+    CreateWindow(
+        L"STATIC",
+        L"Enter username/group:",
+        WS_VISIBLE | WS_CHILD | WS_BORDER,
+        10, 10,
+        200, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL);
+
+    CreateWindow(
+        L"STATIC",
+        L"Enter path to the file/folder : ",
+        WS_VISIBLE | WS_CHILD | WS_BORDER,
+        10, 65,
+        200, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL);
+
+    CreateWindow(
+        L"STATIC",
+        L"File permissions : ",
+        WS_VISIBLE | WS_CHILD,
+        10, 125,
+        200, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL);
+
+    CreateWindow(
+        L"STATIC",
+        L"Directory permissions : ",
+        WS_VISIBLE | WS_CHILD,
+        10, 260,
+        200, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL);
+}
+
+void AddEditChild(HWND hWnd) {
+    hUser = CreateWindow(
+        L"EDIT",
+        L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER,
+        10, 35,
+        250, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    hObject = CreateWindow(
+        L"EDIT",
+        L"",
+        WS_VISIBLE | WS_CHILD | WS_BORDER,
+        10, 90,
+        250, 20,
+        hWnd,
+        NULL,
+        NULL,
+        NULL
+    );
+}
+
+void AddCheckBox(HWND hWnd)
+{
+    CreateWindow(
+        L"BUTTON",
+        L"Write to files",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 150,
+        250, 20,
+        hWnd,
+        (HMENU)CREATE,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Change Attributes",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 175,
+        250, 20,
+        hWnd,
+        (HMENU)WRITE,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Read Permissions/Owners",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 200,
+        250, 20,
+        hWnd,
+        (HMENU)READ,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Read file Permissions/Owners",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 285,
+        250, 20,
+        hWnd,
+        (HMENU)DIR_READ_OWNER,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Create files/subdirectories",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 305,
+        250, 20,
+        hWnd,
+        (HMENU)DIR_CREATE,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Change directory attributes",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 330,
+        250, 20,
+        hWnd,
+        (HMENU)DIR_WRITE_ATTR,
+        NULL,
+        NULL
+    );
+
+    CreateWindow(
+        L"BUTTON",
+        L"Read directory Permissions/Owners",
+        WS_VISIBLE | WS_CHILD | WS_BORDER | BS_AUTOCHECKBOX,
+        10, 355,
+        250, 20,
+        hWnd,
+        (HMENU)DIR_READ_PERM,
+        NULL,
+        NULL
+    );
+}
+
+
+
+
+void CreateChildWindow(HWND hParent)
+{
+    HWND hWnd = CreateWindow(
+        L"ChildClass",
+        L"Advanced Settings",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        100, 100,
+        300, 500,
+        hParent,
+        0,
+        NULL,
+        0
+    );
+
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    //return (int)msg.wParam;
+
+}
+
+LRESULT CALLBACK PanelProc(HWND hWnd, UINT msg,
+    WPARAM wParam, LPARAM lParam) {
+    ACCESS_MASK mask;
+    switch (msg) {
+    case WM_CREATE:
+        AddButtonChild(hWnd);
+        AddStaticChild(hWnd);
+        AddEditChild(hWnd);
+        AddCheckBox(hWnd);
+        break;
+
+    case WM_COMMAND:
+        switch (wParam)
+        {
+        case APPLY_TO_FILE:
+            if (ExtractText(hObject, pszObjName) == 1)
+            {
+                MessageBoxA(hObject, "Enter path to the file/folder", "Path error", MB_OK | MB_ICONEXCLAMATION);
+                break;
+            }
+            if (ExtractText(hUser, pszTrustee) == 1)
+            {
+                MessageBoxA(hUser, "Enter username/group", "Name error", MB_OK | MB_ICONEXCLAMATION);
+                break;
+            }
+            mask = CheckFileMask(hWnd);
+            RequestRights(hWnd, pszObjName, pszTrustee, mask);
+            break;
+
+        case APPLY_TO_DIR:
+
+            if (ExtractText(hObject, pszObjName) == 1)
+            {
+                MessageBoxA(hObject, "Enter path to the file/folder", "Path error", MB_OK | MB_ICONEXCLAMATION);
+                break;
+            }
+            if (ExtractText(hUser, pszTrustee) == 1)
+            {
+                MessageBoxA(hUser, "Enter username/group", "Name error", MB_OK | MB_ICONEXCLAMATION);
+                break;
+            }
+            mask = CheckDirMask(hWnd);
+            RequestRights(hWnd, pszObjName, pszTrustee, mask);
+            break;
+        }
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    default:
+        return DefWindowProc(hWnd, msg, wParam, lParam);
+        break;
+    }
+
+    return 0;
+}
+
+
+
+void RegisterChildClass(void) {
+
+    WNDCLASSW rwc = { 0 };
+
+    rwc.lpszClassName = L"ChildClass";
+    rwc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    rwc.lpfnWndProc = PanelProc;
+    rwc.hCursor = LoadCursor(0, IDC_ARROW);
+
+    if (!RegisterClass(&rwc))
+    {
+        MessageBoxW(NULL,
+            L"Call to RegisterClass failed!",
+            L"Failed",
+            NULL);
+        return;
+    }
+}
+
+
+
+
