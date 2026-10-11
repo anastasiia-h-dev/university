@@ -103,13 +103,15 @@ void CheckAccessMask(HWND hAnotherWindow, ACCESS_MASK mask)
 }
 
 
-void CheckPermissions(char *cPath, HWND hWindow, HWND hAnotherWindow)
+int CheckPermissions(HWND hWindow, HWND hAnotherWindow)
 {
+    char cPath[MAX_PATH];
+
     if (!GetWindowTextA(hWindow, cPath, MAX_PATH))
     {
-        MessageBoxA(hWindow, "Failed to extract path to the file", "Extraction Error", MB_OK);
-    }//else MessageBoxA(hWindow, "Extracted path to the file", "Extraction Success", MB_OK);
-
+        MessageBoxA(hWindow, "Enter path to the file/folder", "Extraction Error", MB_OK | MB_ICONEXCLAMATION);
+        return 1;
+    }
 
     DWORD dwRes = 0;
     PACL pDACL = NULL;
@@ -117,7 +119,7 @@ void CheckPermissions(char *cPath, HWND hWindow, HWND hAnotherWindow)
     EXPLICIT_ACCESS ea;
 
     dwRes = GetNamedSecurityInfoA(
-        "D:\\Downloads\\стзв\\systeminfo.txt", 
+        cPath,
         SE_FILE_OBJECT,
         DACL_SECURITY_INFORMATION,
         NULL, 
@@ -128,9 +130,10 @@ void CheckPermissions(char *cPath, HWND hWindow, HWND hAnotherWindow)
 
     if (dwRes != ERROR_SUCCESS)
     {
-        MessageBoxA(hWindow, "GetNamedSecurityInfo()", "Error", MB_OK);
+        MessageBoxA(hWindow, "GetNamedSecurityInfo()", "Error", MB_OK | MB_ICONEXCLAMATION);
         //goto Cleanup;
-    }//else MessageBoxA(hWindow, "GetNamedSecurityInfo()", "Success", MB_OK);
+        return 1;
+    }
 
     SendMessageW(hAnotherWindow, EM_SETSEL, -1, -1);
     SendMessageW(hAnotherWindow, EM_REPLACESEL, TRUE, (LPARAM)L"        --- PERMISSIONS --");
@@ -189,6 +192,7 @@ void CheckPermissions(char *cPath, HWND hWindow, HWND hAnotherWindow)
         SendMessageW(hAnotherWindow, EM_REPLACESEL, TRUE, (LPARAM)L"\r\n\r\n[+]Permissions:");
         CheckAccessMask(hAnotherWindow, mask);
     }
+    return 0;
 }
 
 
@@ -230,7 +234,7 @@ LSA_HANDLE GetPolicyHandle()
 LSA_UNICODE_STRING CreateUserRights()
 {
     LSA_UNICODE_STRING rights = {};
-    WCHAR wPrivilege[] = L"SE_SYSTEMTIME_NAME";
+    WCHAR wPrivilege[] = SE_SYSTEMTIME_NAME;
     USHORT uPrivilegeLength;
 
     uPrivilegeLength = wcslen(wPrivilege);
@@ -266,6 +270,7 @@ void SetPrivilege()
         &peUse);
 
     ReferencedDomainName = new WCHAR[cchReferencedDomainName];
+    pSid = (PSID)malloc(cbSid);
 
     LookupAccountNameW(
         TARGET_SYSTEM_NAME,
@@ -286,6 +291,7 @@ void SetPrivilege()
         return;
     }
     delete[] ReferencedDomainName;
+    free(pSid);
     LsaClose(PolicyHandle);
 
 }
@@ -306,6 +312,7 @@ DWORD AddAceToObjectsSecurityDescriptor(
     PSECURITY_DESCRIPTOR pSD = NULL;
     EXPLICIT_ACCESS ea;
 
+    char buffer[256];
     if (NULL == pszObjName)
         return ERROR_INVALID_PARAMETER;
 
@@ -314,7 +321,8 @@ DWORD AddAceToObjectsSecurityDescriptor(
         DACL_SECURITY_INFORMATION,
         NULL, NULL, &pOldDACL, NULL, &pSD);
     if (ERROR_SUCCESS != dwRes) {
-        printf("GetNamedSecurityInfo Error %u\n", dwRes);
+        sprintf_s(buffer, 256, "GetNamedSecurityInfo Error %d\n", dwRes);
+        MessageBoxA(NULL, buffer, "Error", MB_OK | MB_ICONERROR);
         goto Cleanup;
     }
 
@@ -327,7 +335,8 @@ DWORD AddAceToObjectsSecurityDescriptor(
 
     dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
     if (ERROR_SUCCESS != dwRes) {
-        printf("SetEntriesInAcl Error %u\n", dwRes);
+        sprintf_s(buffer, 256, "SetEntriesInAcl Error %u\n", dwRes);
+        MessageBoxA(NULL, buffer, "Error", MB_OK | MB_ICONERROR);
         goto Cleanup;
     }
 
@@ -335,7 +344,8 @@ DWORD AddAceToObjectsSecurityDescriptor(
         DACL_SECURITY_INFORMATION,
         NULL, NULL, pNewDACL, NULL);
     if (ERROR_SUCCESS != dwRes) {
-        printf("SetNamedSecurityInfo Error %u\n", dwRes);
+        sprintf_s(buffer, 256, "SetNamedSecurityInfo Error %u\n", dwRes);
+        MessageBoxA(NULL, buffer, "Error", MB_OK | MB_ICONERROR);
         goto Cleanup;
     }
 
