@@ -8,6 +8,12 @@
 #include <intrin.h>
 
 
+
+typedef unsigned char bool;
+#define false 0
+#define true !false
+
+
 void TestOperation();
 
 typedef struct {
@@ -28,7 +34,9 @@ typedef struct {
     bignum r;
 } div_result;
 
-
+typedef struct {
+    bignum num;
+}DegTable[16];
 
 void PrintNumDec(bignum a);
 void PrintNumHex(bignum a);
@@ -58,4 +66,16 @@ div_result LongDivBignum(bignum a, bignum b);
 sub_result SubBigNums(bignum* a, bignum* b);
 
 
+void gcd(bignum a, bignum b, bignum res);
+void lcm(bignum a, bignum b, bignum* result);
+bool isEven(bignum a);
+void reduct(bignum* a, bignum* mod, bignum* result, bignum* myu);
 
+void BarrettMod(bignum* a, bignum* n, bignum* myu, bignum* result);
+
+void ModAdd(bignum* a, bignum* b, bignum* n, bignum* result, bignum* myu);
+int ModSub(bignum* a, bignum* b, bignum* n, bignum* result, bignum* myu);
+void ModMul(bignum* a, bignum* b, bignum* n, bignum* result, bignum* myu);
+void ModSquare(bignum* a, bignum* n, bignum* result, bignum* myu);
+void ModPower(bignum* a, bignum* b, bignum* n, bignum* res, bignum* myu);
+void LongPowerWindow(bignum* a, bignum* b, bignum* result);
