@@ -49,16 +49,14 @@ void Reduct(bignum* p, bignum* g, bignum *result)
 	int bits_g = MSB(g);
 
 	bignum temp_p = { 0 };
-	bignum temp_g = { 0 };
 	Copy(p, &temp_p);
-	Copy(g, &temp_g);
 
 
-	while (bits_p > bits_g)
+	while (bits_p >= bits_g)
 	{
 		// XOR =: a - b ~ a + b
 		bignum temp1 = { 0 };
-		LongShiftBitsToHigh(&temp_g, bits_p - bits_g, &temp1);
+		LongShiftBitsToHigh(g, bits_p - bits_g, &temp1);
 		bignum temp2 = { 0 };
 		AddPoly(temp_p, temp1, &temp2);
 		Copy(&temp2, &temp_p);
@@ -71,9 +69,10 @@ void Reduct(bignum* p, bignum* g, bignum *result)
 
 }
 
+
 void AddPoly(bignum a, bignum b, bignum* result)
 {
-	int max = 0;
+	int min = 0;
 	if (Compare(a, b) == 0) //a = b
 	{
 		bignum temp = SmallConstToBignum(0);
@@ -82,22 +81,21 @@ void AddPoly(bignum a, bignum b, bignum* result)
 	}
 	else if (Compare(a, b) == 1) //a > b
 	{
-		max = a.iNumOfLimbs;
-		BignumReserve(result, max);
+		min = b.iNumOfLimbs;
+		Copy(&a, result);
 	}
 	else
 	{
-		max = b.iNumOfLimbs;
-		BignumReserve(result, max);
+		min = a.iNumOfLimbs;
+		Copy(&b, result);
 
 	}
 
-	for (int i = 0; i < max; i++)
+	for (int i = 0; i < min; i++)
 	{
 		result->uLimbs[i] = a.uLimbs[i] ^ b.uLimbs[i];
 	}
-	
-	result->iNumOfLimbs = max;
+
 	while (result->iNumOfLimbs > 1 && result->uLimbs[result->iNumOfLimbs - 1] == 0)
 	{
 		result->iNumOfLimbs--;
@@ -105,32 +103,74 @@ void AddPoly(bignum a, bignum b, bignum* result)
 	return;
 }
 
-void Square(bignum* p, bignum* r)
+void Square(bignum* p, bignum *g, bignum* r)
 {
 	int m = MSB(p);
 	int idx = 0;
 
-	BignumReserve(r, 2 * m - 1);
-
-	for (int i = 0; i < m; i++)
+	bignum temp = { 0 };
+	BignumReserve(&temp, (2 * m + 2)/32 + 2);
+	temp.iNumOfLimbs = (2 * m + 2) / 32 +2;
+	for (int i = 0; i <= 2*m; i++)
 	{
-		int bit = GetBit(p, idx);
-		if (i % 2 == 0) SetBit(r, i, bit);
-		else SetBit(r, i, 0);
+		if (i % 2 == 0)
+		{
+			int bit = GetBit(p, idx);
+			SetBit(&temp, i, bit);
+			idx++;
+		}
+		else SetBit(&temp, i, 0);
+		
 	}
+	Reduct(&temp, g, r);
 
 }
 
 
 
-//int Trace(bignum* p)
+int Trace(bignum* p, bignum *g)
+{
+	int m = MSB(g);
+	bignum tmp = {0};
+	Reduct(p, g, &tmp);
+
+	bignum c= SmallConstToBignum(0);
+
+	for (int i = 0; i < m; i++)
+	{
+		bignum temp1 = { 0 };
+		AddPoly(c, tmp, &temp1);
+		Copy(&temp1, &c);
+
+		bignum temp2 = { 0 };
+		Square(&tmp, g, &temp2);
+		Copy(&temp2, &tmp);
+		free(temp1.uLimbs);
+		free(temp2.uLimbs);
+	}
+	bignum temp3 = { 0 };
+	Reduct(&c, g, &temp3);
+	if (c.iNumOfLimbs == 0) return 0;
+	else	return temp3.uLimbs[0];
+	/*if (result % 2 == 0) return 0;
+	else return 1;*/
+}
+
+//void PolyPow(bignum* a, bignum* g, bignum *r)
 //{
-//	int m = MSB(p);
-//	int result = 0;
-//	for (int i = 0; i < m; i++)
+//	for (int i = MSB(g); i >= 0; i--)
 //	{
-//		result += ToPower(p, a);
+//		if (GetBit(g, i) == 1)
+//		{
+//			bignum temp = LongMul(&result, a);
+//			free(result.uLimbs);
+//			result = temp;
+//		}
+//		if (i != 0)
+//		{
+//			bignum temp = LongMul(&result, &result);
+//			free(result.uLimbs);
+//			result = temp;
+//		}
 //	}
-//	if (result % 2 == 0) return 0;
-//	else return 1;
 //}
