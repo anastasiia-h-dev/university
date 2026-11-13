@@ -7,6 +7,7 @@ void PrintNumBin(bignum a)
 {
     int idx = 0;
     int bits = MSB(&a);
+        
     for (int j = bits; j >= 0; j--)
     {
        // if(idx % 32 == 0) printf(" ");
