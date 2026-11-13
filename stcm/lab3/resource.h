@@ -85,3 +85,5 @@ void p2bf(char* poly, bignum* r);
 void PrintNumBin(bignum a);
 void AddPoly(bignum a, bignum b, bignum* result);
 void Reduct(bignum* p, bignum* g, bignum* result);
+void Square(bignum* p, bignum* g, bignum* r);
+int Trace(bignum* p, bignum* g);
