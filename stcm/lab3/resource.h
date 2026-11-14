@@ -48,6 +48,9 @@ int GetBit(bignum* a, unsigned int bit_index);
 int MSB(const bignum* a);
 int Compare(bignum a, bignum b);
 
+bignum LongMulOneDigit(bignum* a, unsigned int b);
+void LongShiftDigitsToHigh(bignum* a, unsigned int limb_shifts);
+
 void LongShiftBitsToLow(const bignum* src, unsigned int shift_bits, bignum* dest);
 void LongShiftBitsToHigh(const bignum* src, unsigned int shift_bits, bignum* dest);
 bignum SmallConstToBignum(int small);
@@ -87,3 +90,8 @@ void AddPoly(bignum a, bignum b, bignum* result);
 void Reduct(bignum* p, bignum* g, bignum* result);
 void Square(bignum* p, bignum* g, bignum* r);
 int Trace(bignum* p, bignum* g);
+
+void XTime(bignum* a, bignum* b, bignum* g, bignum* r);
+void PowPoly(bignum* a, int c, bignum* g, bignum* r);
+void PowPolyHorner(bignum* a, bignum* c, bignum* g, bignum* r);
+void Inverse(bignum* a, bignum* g, bignum* r);
