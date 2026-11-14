@@ -5,7 +5,1013 @@ bignum ZERO = { 0,0,0 };
 
 void PrintNumBin(bignum a)
 {
+    int idx = 0;#include "resource.h"
+
+bignum ZERO = { 0,0,0 };
+
+
+void PrintNumBin(bignum a)
+{
     int idx = 0;
+    int bits = MSB(&a);
+        
+    for (int j = bits; j >= 0; j--)
+    {
+       // if(idx % 32 == 0) printf(" ");
+        int bit = GetBit(&a, j);
+        printf("%d", bit);
+        idx++;
+    }  
+}
+
+void PrintNumHex(bignum a)
+{
+
+    printf("0x");
+
+    int i = (int)a.iNumOfLimbs - 1;
+    printf("%X", a.uLimbs[i]);
+    for (i = i - 1; i >= 0; i--)
+    {
+        printf("%08X", a.uLimbs[i]);
+    }
+}
+
+
+
+unsigned int BignumReserve(bignum* n, unsigned int new_capacity)
+{
+    // if (new_capacity == 0) new_capacity = 1;
+    if (new_capacity <= n->uCapacity) return 1;
+    uint32_t* new_limbs = (uint32_t*)realloc(n->uLimbs, new_capacity * sizeof(uint32_t));
+    if (!new_limbs)
+    {
+        printf("BignumReserve : Memory Allocation Failed");
+        return -1;
+    }
+    memset(new_limbs + n->uCapacity, 0, (new_capacity - n->uCapacity) * sizeof(uint32_t));
+    n->uLimbs = new_limbs;
+    n->uCapacity = new_capacity;
+    return 0;
+}
+
+
+void SetBit(bignum* num, unsigned int bit_index, unsigned int bit)
+{
+    unsigned int index_in_limb = bit_index % 32;
+    unsigned int limb_index = bit_index / 32;
+
+    if (limb_index >= num->uCapacity)
+    {
+        BignumReserve(num, limb_index + 1);
+    }
+    if (bit == 1)
+    {
+        num->uLimbs[limb_index] |= ((uint32_t)1 << index_in_limb);
+    }
+    else
+    {
+        num->uLimbs[limb_index] &= ~((uint32_t)1 << index_in_limb);
+    }
+
+    if (limb_index >= num->iNumOfLimbs && bit == 1)
+    {
+        num->iNumOfLimbs = limb_index + 1;
+    }
+}
+
+
+bignum SmallConstToBignum(int small)
+{
+    bignum result;
+    result.iNumOfLimbs = 1;
+    result.uCapacity = 1;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+
+    result.uLimbs[0] = small;
+    return result;
+}
+
+bignum StrToBinaryBignum(char* str)
+{
+    unsigned int len = (unsigned int)strlen(str);
+    char* temp_number = (char*)malloc(len + 1);
+    char* current = (char*)malloc(len + 1); //number which I will be working with
+    strcpy(current, str);
+
+    unsigned int bit_idx = 0; //index where the current binary digit will be stored
+
+    bignum result; //that's where my binary number will be stored and that's what will be returned
+    result.iNumOfLimbs = 1;
+    result.uCapacity = 4;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+
+    unsigned int curlen = len;
+    while (!(current[0] == '0' && current[1] == '\0') && current[0] != '\0')
+    {
+        int remainder = 0;
+        int idx = 0;
+
+        for (unsigned int i = 0; i < curlen; i++)
+        {
+            int temp = 10 * remainder + (current[i] - '0');
+            temp_number[idx++] = (temp / 2) + '0';
+            remainder = temp % 2;
+        }
+        temp_number[idx] = '\0';
+
+        SetBit(&result, bit_idx, remainder);
+        bit_idx++;
+
+        int zero = 0;
+        while (temp_number[zero] == '0' && zero < idx - 1)
+        {
+            zero++;
+        }
+
+        curlen = idx - zero;
+        memmove(current, temp_number + zero, curlen + 1);
+        current[curlen] = '\0';
+
+    }
+    free(current);
+    free(temp_number);
+
+    return result;
+}
+
+bignum StrHexToBignum(char* hex_str)
+{
+    // Пропускаємо префікс "0x" або "0X", якщо він присутній
+    if (hex_str[0] == '0' && (hex_str[1] == 'x' || hex_str[1] == 'X'))
+    {
+        hex_str += 2;
+    }
+
+    int len = (int)strlen(hex_str);
+    if (len == 0)
+    {
+        return SmallConstToBignum(0);
+    }
+
+    bignum result;
+    result.iNumOfLimbs = (len + 7) / 8;
+    result.uCapacity = result.iNumOfLimbs + 1;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+
+    int limb_idx = 0;
+    // Йдемо з кінця рядка до початку блоками по 8 символів
+    for (int end = len; end > 0; end -= 8)
+    {
+        int start = (end >= 8) ? (end - 8) : 0;
+        uint32_t limb_val = 0;
+
+        for (int i = start; i < end; i++)
+        {
+            char c = hex_str[i];
+            uint8_t val = 0;
+
+            if (c >= '0' && c <= '9') val = c - '0';
+            else if (c >= 'a' && c <= 'f') val = c - 'a' + 10;
+            else if (c >= 'A' && c <= 'F') val = c - 'A' + 10;
+            else continue; // захист від випадкових пробілів
+
+            limb_val = (limb_val << 4) | val;
+        }
+
+        result.uLimbs[limb_idx++] = limb_val;
+    }
+
+    // Нормалізація: прибираємо провідні нулі
+    while (result.iNumOfLimbs > 1 && result.uLimbs[result.iNumOfLimbs - 1] == 0)
+    {
+        result.iNumOfLimbs--;
+    }
+
+    return result;
+}
+bignum AddBigNums(bignum* a, bignum* b)
+{
+    //a = a + b
+    //carry = 0
+
+    //i'll just overwrite a
+    unsigned int max_limbs = 0;
+    if (a->iNumOfLimbs > b->iNumOfLimbs)
+    {
+        max_limbs = a->iNumOfLimbs;
+    }
+    else
+    {
+        max_limbs = b->iNumOfLimbs;
+    }
+
+    bignum result;
+    result.iNumOfLimbs = 0;
+    result.uCapacity = max_limbs + 1;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+
+    uint64_t carry = 0;
+
+
+    for (unsigned int i = 0; i < max_limbs; i++)
+    {
+        uint64_t word_a = (i < a->iNumOfLimbs) ? a->uLimbs[i] : 0;
+        uint64_t word_b = (i < b->iNumOfLimbs) ? b->uLimbs[i] : 0;
+        uint64_t sum = (uint64_t)word_a + word_b + carry;
+
+        result.uLimbs[i] = (uint32_t)sum;
+        carry = sum >> 32;
+    }
+
+    if (carry > 0)
+    {
+        result.uLimbs[max_limbs] = (uint32_t)carry;
+        result.iNumOfLimbs = max_limbs + 1;
+    }
+    else
+    {
+        result.iNumOfLimbs = max_limbs;
+    }
+
+    while (result.iNumOfLimbs > 1 && result.uLimbs[result.iNumOfLimbs - 1] == 0)
+    {
+        result.iNumOfLimbs--;
+    }
+
+    return result;
+}
+
+
+sub_result SubBigNums(bignum* a, bignum* b)
+{
+    //є три варіанти
+    //a > b => беззнакове віднімання, розмір результуючого bignum = розмір а
+    //a < b => не оброблюється, у нас числа беззнакові
+    //a = b => повертаємо нуль
+    sub_result res;
+    //відразу відкидаємо варіант a > b, якщо бачимо, що лімбів у b більше, ніж у а
+    if (b->iNumOfLimbs > a->iNumOfLimbs)
+    {
+        //printf("\nSubBigNums() : [!]Can't subtract bigger value from lesser.");
+        res.diff = ZERO;
+        res.iBorrow = -1;
+        return res;
+    }
+
+
+    bignum result;
+    result.iNumOfLimbs = a->iNumOfLimbs;
+    result.uCapacity = a->iNumOfLimbs + 1;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+
+    int64_t borrow = 0;
+    for (unsigned int i = 0; i < a->iNumOfLimbs; i++)
+    {
+        uint64_t ai = a->uLimbs[i];
+        uint64_t bi = (i < b->iNumOfLimbs) ? b->uLimbs[i] : 0;
+
+        int64_t sub = (int64_t)ai - (int64_t)bi - borrow;
+
+        //віднімали менше від більшого, або два однакових - > все ок
+        if (sub >= 0)
+        {
+            result.uLimbs[i] = (uint32_t)sub;
+            borrow = 0;
+        }
+
+        //віднімали більше від меншого
+        else
+        {
+            result.uLimbs[i] = (uint32_t)(sub + ((int64_t)1 << 32));
+            borrow = 1;
+        }
+    }
+    if (borrow != 0)
+    {
+        //printf("\n[!]Subtracted bigger from lesser. Undefined behaviour.");
+        free(result.uLimbs);
+        res.diff = ZERO;
+        res.iBorrow = borrow;
+        return res;
+
+    }
+    while (result.iNumOfLimbs > 1 && result.uLimbs[result.iNumOfLimbs - 1] == 0)
+    {
+        result.iNumOfLimbs--;
+    }
+
+    res.diff = result;
+    res.iBorrow = borrow;
+    return res;
+}
+
+
+int Compare(bignum a, bignum b)
+{
+    unsigned int na = a.iNumOfLimbs;
+    unsigned int nb = b.iNumOfLimbs;
+
+    while (a.iNumOfLimbs != 0 && a.uLimbs[na - 1] == 0)
+    {
+        a.iNumOfLimbs--;
+        na--;
+    }
+    while (b.iNumOfLimbs != 0 && b.uLimbs[nb - 1] == 0)
+    {
+        b.iNumOfLimbs--;
+        nb--;
+    }
+    if (na > nb)
+    {
+        return 1;
+    }
+    if (nb > na)
+    {
+        return -1;
+    }
+
+    for (int i = na - 1; i >= 0; i--)
+    {
+        if (a.uLimbs[i] > b.uLimbs[i]) return 1;
+        if (a.uLimbs[i] < b.uLimbs[i]) return -1;
+    }
+
+    return 0;
+}
+
+
+bignum LongMulOneDigit(bignum* a, unsigned int b)
+{
+    unsigned int max_limbs = a->iNumOfLimbs;
+
+
+    bignum result;
+    result.iNumOfLimbs = 0;
+    result.uCapacity = max_limbs + 1;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+
+    uint64_t carry = 0;
+
+
+    for (unsigned int i = 0; i < max_limbs; i++)
+    {
+        uint64_t word_a = (i < a->iNumOfLimbs) ? a->uLimbs[i] : 0;
+        uint64_t sum = (uint64_t)word_a * b + carry;
+
+        result.uLimbs[i] = (uint32_t)sum;
+        carry = sum >> 32;
+    }
+
+    if (carry > 0)
+    {
+        result.uLimbs[max_limbs] = (uint32_t)carry;
+        result.iNumOfLimbs = max_limbs + 1;
+    }
+    else
+    {
+        result.iNumOfLimbs = max_limbs;
+    }
+
+    while (result.iNumOfLimbs > 1 && result.uLimbs[result.iNumOfLimbs - 1] == 0)
+    {
+        result.iNumOfLimbs--;
+    }
+
+    return result;
+}
+
+
+void LongShiftDigitsToHigh(bignum* a, unsigned int limb_shifts)
+{
+
+    if (limb_shifts == 0 || a->iNumOfLimbs == 0) return;
+
+    int old_len = (int)a->iNumOfLimbs;
+    unsigned int new_len = old_len + limb_shifts;
+
+    BignumReserve(a, new_len);
+    for (int i = old_len - 1; i >= 0; i--)
+    {
+        a->uLimbs[i + limb_shifts] = a->uLimbs[i];
+    }
+
+
+    for (unsigned int i = 0; i < limb_shifts; i++)
+    {
+        a->uLimbs[i] = 0;
+    }
+
+    a->iNumOfLimbs = new_len;
+}
+
+
+bignum LongMul(bignum* a, bignum* b)
+{
+    bignum result;
+    result.iNumOfLimbs = 1;
+    result.uCapacity = 4;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+
+    for (unsigned int i = 0; i < b->iNumOfLimbs; i++)
+    {
+        if (b->uLimbs[i] == 0) continue;
+
+
+        bignum temp = LongMulOneDigit(a, b->uLimbs[i]);
+
+        LongShiftDigitsToHigh(&temp, i);
+
+        bignum old_res = result;
+        result = AddBigNums(&old_res, &temp);
+
+
+        free(old_res.uLimbs);
+        free(temp.uLimbs);
+    }
+
+    return result;
+}
+
+
+bignum SquareBignum(bignum* a)
+{
+    return LongMul(a, a);
+}
+
+
+//int MSB(bignum *a)
+//{
+//    //so, basically i need to count limbs and multiply it by 32 (because uint32_t, ok)
+//    //but what if there are leading zeroes in the last limb
+//    //like 0000000000011 or smth
+//
+//    //lets just multiply: (a.iNumOfLimbs - 1) * 32
+//    //and in the last limb I will count bits manually by shifting limb to the left until it becomes 0
+//    //the amount of shifts will be the amount of bits
+//
+//    int count = 0;
+//    if (a->iNumOfLimbs == 0) return -1;
+//    uint32_t top_limb = a->uLimbs[a->iNumOfLimbs - 1];
+//    while ( top_limb != 0)
+//    {
+//        count++;
+//        top_limb >>= 1;
+//
+//    }
+//
+//    int length = (a->iNumOfLimbs - 1) * 32 + count;
+//    return length - 1;
+//}
+
+
+int MSB(const bignum* a)
+{
+    if (a == NULL || a->uLimbs == NULL ||
+        a->iNumOfLimbs == 0)
+    {
+        return -1;
+    }
+
+    int i = (int)a->iNumOfLimbs - 1;
+
+    while (i >= 0 && a->uLimbs[i] == 0)
+    {
+        i--;
+    }
+
+    if (i < 0)
+    {
+        return -1; // Число дорівнює нулю
+    }
+
+    uint32_t top_limb = a->uLimbs[i];
+    int count = 0;
+
+    while (top_limb != 0)
+    {
+        count++;
+        top_limb >>= 1;
+    }
+
+    return i * 32 + count - 1;
+}
+
+//it could be used as an equivalent to lsr, if powers of two are passed as an argument
+void LongShiftBitsToHigh(const bignum* src, unsigned int shift_bits, bignum* dest)
+{
+
+    if (shift_bits == 0)
+    {
+        dest->uCapacity = src->iNumOfLimbs + 1;
+        dest->iNumOfLimbs = src->iNumOfLimbs;
+        dest->uLimbs = (uint32_t*)calloc(dest->uCapacity, sizeof(uint32_t));
+        memcpy(dest->uLimbs, src->uLimbs, src->iNumOfLimbs * sizeof(uint32_t));
+        return;
+    }
+
+    unsigned int limb_shifts = shift_bits / 32;
+    unsigned int bit_shifts = shift_bits % 32;
+
+    dest->uCapacity = src->iNumOfLimbs + limb_shifts + 2;
+    dest->iNumOfLimbs = src->iNumOfLimbs + limb_shifts + 1;
+    dest->uLimbs = (uint32_t*)calloc(dest->uCapacity, sizeof(uint32_t));
+
+
+    uint32_t carry = 0;
+    for (unsigned int i = 0; i < src->iNumOfLimbs; i++)
+    {
+        uint64_t current = ((uint64_t)src->uLimbs[i] << bit_shifts) | carry; //store shifted bytes in the extended variable, add carry if any, carry is added to the last 32 bit
+        dest->uLimbs[i + limb_shifts] = (uint32_t)current;
+        carry = (uint32_t)(current >> 32);
+    }
+    if (carry > 0)
+    {
+        dest->uLimbs[src->iNumOfLimbs + limb_shifts] = carry;
+    }
+    while (dest->iNumOfLimbs > 1 && dest->uLimbs[dest->iNumOfLimbs - 1] == 0)
+    {
+        dest->iNumOfLimbs--;
+    }
+}
+
+void LongShiftBitsToLow(const bignum* src, unsigned int shift_bits, bignum* dest)
+{
+    //if there is no bits to shift for -> simply copy bignum from src to dest
+    if (shift_bits == 0)
+    {
+        dest->uCapacity = src->iNumOfLimbs;
+        dest->iNumOfLimbs = src->iNumOfLimbs;
+        dest->uLimbs = (uint32_t*)calloc(dest->uCapacity, sizeof(uint32_t));
+        memcpy(dest->uLimbs, src->uLimbs, src->iNumOfLimbs * sizeof(uint32_t));
+        return;
+    }
+
+    //otherwise
+    unsigned int limb_shifts = shift_bits / 32;
+    unsigned int bit_shifts = shift_bits % 32;
+
+    dest->uCapacity = src->iNumOfLimbs;
+    dest->iNumOfLimbs = dest->uCapacity;
+    dest->uLimbs = (uint32_t*)calloc(dest->uCapacity, sizeof(uint32_t));
+
+    uint32_t carry = 0;
+    for (int i = (int)src->iNumOfLimbs - 1; i >= (int)limb_shifts; i--)
+    {
+        uint64_t current = ((uint64_t)src->uLimbs[i] >> bit_shifts) | carry;
+        dest->uLimbs[i - limb_shifts] = (uint32_t)current;
+
+        if (bit_shifts > 0)
+        {
+            carry = (uint32_t)(src->uLimbs[i] << (32 - bit_shifts));
+
+        }
+    }
+    while (dest->iNumOfLimbs > 1 && dest->uLimbs[dest->iNumOfLimbs - 1] == 0)
+    {
+        dest->iNumOfLimbs--;
+    }
+}
+
+//this function returns two results in one structure: quotient and remainder
+div_result LongDivBignum(bignum a, bignum b)
+{
+    //a = b*q + r
+    //неважливо, чи a > b, чи b > a
+
+    int k = MSB(&b);
+
+    //have to copy a into r
+    bignum r;
+    r.iNumOfLimbs = a.iNumOfLimbs;
+    r.uCapacity = a.uCapacity;
+    r.uLimbs = (uint32_t*)calloc(r.uCapacity, sizeof(uint32_t));
+    memcpy(r.uLimbs, a.uLimbs, a.iNumOfLimbs * sizeof(uint32_t));
+
+    //and q is just initialized
+    bignum q;
+    q.iNumOfLimbs = 1;
+    q.uCapacity = 1;
+    q.uLimbs = (uint32_t*)calloc(q.uCapacity, sizeof(uint32_t));
+    //calloc automatically sets all the bits to zero, so I do not need to set q to zero manually
+
+    while (Compare(r, b) >= 0)
+    {
+        int t = MSB(&r);
+        int shift = t - k;
+
+        bignum c;
+
+        LongShiftBitsToHigh(&b, t - k, &c);
+        if (Compare(r, c) == -1)
+        {
+            free(c.uLimbs);
+            t -= 1;
+            LongShiftBitsToHigh(&b, t - k, &c);
+        }
+
+        sub_result subres;
+        subres = SubBigNums(&r, &c);
+        r = subres.diff;
+        free(c.uLimbs);
+        unsigned int bit = 0;
+        SetBit(&q, t - k, 1);
+    }
+
+    div_result result;
+    result.q = q;
+    result.r = r;
+
+    return result;
+}
+
+
+int GetBit(bignum* a, unsigned int bit_index)
+{
+    unsigned int index_in_limb = bit_index % 32;
+    unsigned int limb_index = bit_index / 32;
+
+    if (limb_index >= a->iNumOfLimbs) return 0;
+    return (a->uLimbs[limb_index] >> index_in_limb) & (uint32_t)1;
+}
+
+
+bignum LongPower(bignum* a, bignum* b)
+{
+    bignum result;
+    result.iNumOfLimbs = 1;
+    result.uCapacity = 4;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+    result.uLimbs[0] = 1;
+
+
+    for (int i = MSB(b); i >= 0; i--)
+    {
+        if (GetBit(b, i) == 1)
+        {
+            bignum temp = LongMul(&result, a);
+            free(result.uLimbs);
+            result = temp;
+        }
+        if (i != 0)
+        {
+            bignum temp = LongMul(&result, &result);
+            free(result.uLimbs);
+            result = temp;
+        }
+    }
+
+    return result;
+
+}
+
+
+
+//LAB2
+void Copy(bignum* src, bignum* dest)
+{
+    BignumReserve(dest, src->iNumOfLimbs);
+    for (int i = 0; i < src->iNumOfLimbs; i++)
+    {
+        dest->uLimbs[i] = src->uLimbs[i];
+    }
+    dest->iNumOfLimbs = src->iNumOfLimbs;
+}
+
+bool isZero(bignum* a)
+{
+    if (a->iNumOfLimbs == 0) return true;
+    for (unsigned int i = 0; i < a->iNumOfLimbs; i++)
+    {
+        if (a->uLimbs[i] != 0) return false;
+    }
+    return true;
+}
+
+
+bool isEven(bignum a)
+{
+    if (a.iNumOfLimbs == 0) return true;
+    return (a.uLimbs[0] & (uint32_t)1) == 0;
+}
+
+
+void gcd(bignum a, bignum b, bignum* res)
+{
+    if (isZero(&a)) { Copy(&b, res); return; }
+    if (isZero(&b)) { Copy(&a, res); return; }
+
+    bignum u = { 0 };
+    bignum v = { 0 };
+    Copy(&a, &u);
+    Copy(&b, &v);
+
+    unsigned int shift = 0;
+    while (isEven(u) && isEven(v))
+    {
+        bignum next_u = { 0 };
+        bignum next_v = { 0 };
+        LongShiftBitsToLow(&u, 1, &next_u);
+        LongShiftBitsToLow(&v, 1, &next_v);
+        free(u.uLimbs);
+        free(v.uLimbs);
+        u = next_u;
+        v = next_v;
+        shift++;
+    }
+
+    while (isEven(u))
+    {
+        bignum next_u = { 0 };
+        LongShiftBitsToLow(&u, 1, &next_u);
+        free(u.uLimbs);
+        u = next_u;
+    }
+
+    while (!isZero(&v))
+    {
+        while (isEven(v))
+        {
+            bignum next_v = { 0 };
+            LongShiftBitsToLow(&v, 1, &next_v);
+            free(v.uLimbs);
+            v = next_v;
+        }
+        if (Compare(u, v) == 1)
+        {
+            bignum temp = u;
+            u = v;
+            v = temp;
+        }
+        sub_result sub_res = SubBigNums(&v, &u);
+        free(v.uLimbs);
+        v = sub_res.diff;
+    }
+    if (shift > 0)
+    {
+        LongShiftBitsToHigh(&u, shift, res);
+    }
+    else
+    {
+        BignumReserve(res, u.iNumOfLimbs);
+        Copy(&u, res);
+    }
+
+    free(u.uLimbs);
+    free(v.uLimbs);
+}
+
+void lcm(bignum a, bignum b, bignum* result)
+{
+
+
+    bignum g = { 0 };
+    bignum quotient = { 0 };
+    bignum product = { 0 };
+
+    // g = gcd(a, b)
+    gcd(a, b, &g);
+
+    // quotient = a / g
+    div_result div = LongDivBignum(a, g);
+    quotient = div.q;
+
+    product = LongMul(&div.q, &b);
+
+
+    BignumReserve(result, product.iNumOfLimbs);
+    for (int i = 0; i < product.iNumOfLimbs; i++)
+    {
+        result->uLimbs[i] = product.uLimbs[i];
+    }
+    result->iNumOfLimbs = product.iNumOfLimbs;
+    while (result->iNumOfLimbs >= 1 && result->uLimbs[result->iNumOfLimbs - 1] == 0)
+    {
+        result->iNumOfLimbs--;
+    }
+}
+
+
+void reduct(bignum* a, bignum* mod, bignum* result, bignum* myu)
+{
+    // Якщо a < mod, редукція не потрібна
+    if (Compare(*a, *mod) < 0)
+    {
+        BignumReserve(result, a->iNumOfLimbs);
+        memcpy(result->uLimbs, a->uLimbs, a->iNumOfLimbs * sizeof(uint32_t));
+        result->iNumOfLimbs = a->iNumOfLimbs;
+        return;
+    }
+
+    int k = MSB(mod) + 1;
+    bignum shifted_a = { 0 };
+    bignum shifted_q = { 0 };
+
+
+    LongShiftBitsToLow(a, k - 1, &shifted_a);
+
+    bignum product_1 = LongMul(&shifted_a, myu);
+    free(shifted_a.uLimbs);
+
+    LongShiftBitsToLow(&product_1, k + 1, &shifted_q);
+    free(product_1.uLimbs);
+
+    bignum product_2 = LongMul(&shifted_q, mod);
+    free(shifted_q.uLimbs);
+
+    sub_result r = SubBigNums(a, &product_2);
+    free(product_2.uLimbs);
+
+    bignum cur_r = r.diff;
+
+    while (Compare(cur_r, *mod) >= 0)
+    {
+        sub_result sub_step = SubBigNums(&cur_r, mod);
+        free(cur_r.uLimbs);
+        cur_r = sub_step.diff;
+    }
+
+    BignumReserve(result, cur_r.iNumOfLimbs);
+    for (int i = 0; i < cur_r.iNumOfLimbs; i++)
+    {
+        result->uLimbs[i] = cur_r.uLimbs[i];
+    }
+
+    result->iNumOfLimbs = cur_r.iNumOfLimbs;
+
+    free(cur_r.uLimbs);
+}
+
+bignum ExtractBitWindow(const bignum* a, unsigned int start_bit, unsigned int num_bits)
+{
+    //зсуваю потрібне вікно до молодших бітів та створюю маску з одиниць 
+    //bits & mask = біти у вікні
+
+    bignum shifted = { 0 };
+    bignum one = SmallConstToBignum(1);
+    bignum power = { 0 };
+
+    LongShiftBitsToLow(a, start_bit, &shifted);
+    LongShiftBitsToHigh(&one, num_bits, &power);
+
+    sub_result s = SubBigNums(&power, &one);
+    free(power.uLimbs);
+    free(one.uLimbs);
+
+    bignum mask = s.diff;
+
+    //залишаю тільки молодші num_bits
+    if (shifted.iNumOfLimbs > mask.iNumOfLimbs) {
+        shifted.iNumOfLimbs = mask.iNumOfLimbs;
+    }
+    for (unsigned int i = 0; i < shifted.iNumOfLimbs; i++) {
+        shifted.uLimbs[i] &= mask.uLimbs[i];
+    }
+    while (shifted.iNumOfLimbs > 1 && shifted.uLimbs[shifted.iNumOfLimbs - 1] == 0) {
+        shifted.iNumOfLimbs--;
+    }
+
+    free(mask.uLimbs);
+    return shifted;
+}
+
+
+void ModAdd(bignum* a, bignum* b, bignum* n, bignum* result, bignum* myu)
+{
+    bignum num = AddBigNums(a, b);
+    reduct(&num, n, &result, myu);
+}
+
+void ModSub(bignum* a, bignum* b, bignum* n, bignum* result, bignum* myu)
+{
+    bignum temp_a = { 0 };
+    bignum temp_b = { 0 };
+    reduct(a, n, &temp_a, myu);
+    reduct(b, n, &temp_b, myu);
+
+    //тепер працюю з редукованими числами
+    //temp_a >= temp_b
+    if (Compare(temp_a, temp_b) >= 0)
+    {
+        sub_result sub_res = SubBigNums(&temp_a, &temp_b);
+        BignumReserve(result, sub_res.diff.uCapacity);
+        for (int i = 0; i < sub_res.diff.iNumOfLimbs; i++)
+        {
+            result->uLimbs[i] = sub_res.diff.uLimbs[i];
+        }
+
+        result->iNumOfLimbs = sub_res.diff.iNumOfLimbs;
+        free(sub_res.diff.uLimbs);
+        return;
+    }
+
+    bignum temp = AddBigNums(a, n);
+    sub_result sub_res = SubBigNums(&temp, b);
+    free(temp.uLimbs);
+    BignumReserve(result, sub_res.diff.uCapacity);
+    for (int i = 0; i < sub_res.diff.iNumOfLimbs; i++)
+    {
+        result->uLimbs[i] = sub_res.diff.uLimbs[i];
+    }
+
+    result->iNumOfLimbs = sub_res.diff.iNumOfLimbs;
+    free(sub_res.diff.uLimbs);
+
+    return;
+}
+
+void ModMul(bignum* a, bignum* b, bignum* n, bignum* result, bignum* myu)
+{
+
+    bignum mul = LongMul(a, b);
+    reduct(&mul, n, result, myu);
+}
+
+void ModSquare(bignum* a, bignum* n, bignum* result, bignum* myu)
+{
+    bignum square = SquareBignum(a);
+    reduct(&square, n, result, myu);
+}
+
+
+
+bignum ModPower(bignum* a, bignum* b, bignum* n, bignum* myu)
+{
+    bignum result;
+    result.iNumOfLimbs = 1;
+    result.uCapacity = 4;
+    result.uLimbs = (uint32_t*)calloc(result.uCapacity, sizeof(uint32_t));
+    result.uLimbs[0] = 1;
+
+    for (int i = MSB(b); i >= 0; i--)
+    {
+        if (GetBit(b, i) == 1)
+        {
+            bignum temp = LongMul(&result, a);
+            //free(result.uLimbs);
+            reduct(&temp, n, &result, myu);
+        }
+        if (i != 0)
+        {
+            bignum temp = LongMul(&result, &result);
+            //free(result.uLimbs);
+            reduct(&temp, n, &result, myu);
+        }
+    }
+    return result;
+}
+
+void LongPowerWindow(bignum* a, bignum* b, bignum n, bignum myu, bignum* result)
+{
+    DegTable D;
+    memset(&D, 0, sizeof(D));
+    D[0].num = SmallConstToBignum(1);
+    bignum temp = { 0 };
+    Copy(a, &temp);
+
+    
+    reduct(&temp, &n, &D[1].num, &myu);
+    for (int i = 2; i <= 15; i++)
+    {
+        bignum temp = LongMul(&D[i - 1].num, a);
+        reduct(&temp , &n, &D[i].num, &myu);
+    }
+    int m = MSB(b) + 1;
+    int first_len = (m % 4 == 0) ? 4 : (m % 4);
+    int start = m - first_len;
+
+    bignum win = ExtractBitWindow(b, start, first_len);
+    bignum C = { 0 };
+    Copy(&D[win.uLimbs[0]].num, &C);
+    free(win.uLimbs);
+
+    for (int i = start - 4; i >= 0; i -= 4)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            bignum temp = LongMul(&C, &C);
+            reduct(&temp, &n, &C, &myu);
+        }
+
+        win = ExtractBitWindow(b, i, 4);
+        unsigned int idx = win.uLimbs[0];
+        free(win.uLimbs);
+
+        if (idx > 0)
+        {
+            bignum temp = LongMul(&C, &D[idx].num);
+            reduct(&temp, &n, &C, &myu);
+        }
+    }
+
+    Copy(&C, result);
+    free(C.uLimbs);
+
+    for (int i = 0; i < 16; i++)
+    {
+        free(D[i].num.uLimbs);
+    }
+}
     int bits = MSB(&a);
         
     for (int j = bits; j >= 0; j--)
