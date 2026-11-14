@@ -42,6 +42,7 @@ void bf2p(bignum* p)
 
 }
 
+
 void Reduct(bignum* p, bignum* g, bignum *result)
 {
 	//p(x) mod g(x)
@@ -103,6 +104,7 @@ void AddPoly(bignum a, bignum b, bignum* result)
 	return;
 }
 
+
 void Square(bignum* p, bignum *g, bignum* r)
 {
 	int m = MSB(p);
@@ -125,7 +127,6 @@ void Square(bignum* p, bignum *g, bignum* r)
 	Reduct(&temp, g, r);
 
 }
-
 
 
 int Trace(bignum* p, bignum *g)
@@ -156,21 +157,92 @@ int Trace(bignum* p, bignum *g)
 	else return 1;*/
 }
 
-//void PolyPow(bignum* a, bignum* g, bignum *r)
-//{
-//	for (int i = MSB(g); i >= 0; i--)
-//	{
-//		if (GetBit(g, i) == 1)
-//		{
-//			bignum temp = LongMul(&result, a);
-//			free(result.uLimbs);
-//			result = temp;
-//		}
-//		if (i != 0)
-//		{
-//			bignum temp = LongMul(&result, &result);
-//			free(result.uLimbs);
-//			result = temp;
-//		}
-//	}
-//}
+
+void XTime(bignum* a, bignum* b, bignum* g, bignum* r)
+{
+	bignum temp_a = { 0 }, temp_b = { 0 }, temp_g = { 0 };
+	Reduct(a, g, &temp_a);
+	Reduct(b, g, &temp_b); //temp_b == b
+	Copy(g, &temp_g);
+
+	
+	int m = MSB(g);
+	bignum result = { 0 };
+	BignumReserve(&result, m / 32 + 1);
+	result.iNumOfLimbs = m / 32 + 1;
+
+	for (int i = 0; i < m; i++)
+	{
+		if (GetBit(&temp_a, i) == 1)
+		{
+			bignum temp = { 0 };
+			Copy(&result, &temp);
+			AddPoly(temp, temp_b, &result);
+			free(temp.uLimbs);
+		}
+
+		bignum temp = { 0 };
+		LongShiftBitsToHigh(&temp_b, 1, &temp);
+
+		Reduct(&temp, g, &temp_b);
+
+		free(temp.uLimbs);
+	}
+	Reduct(&result, g, r);
+}
+
+void PowPoly(bignum* a, int c, bignum* g, bignum* r)
+{
+	int bits_a = MSB(a);
+
+	bignum tmp = { 0 };
+	tmp = SmallConstToBignum(1);
+
+	for (int i = 0; i < c; i++)
+	{
+		bignum prev_a = { 0 };
+		Copy(&tmp, &prev_a);
+		XTime(a, &prev_a, g, &tmp);
+		free(prev_a.uLimbs);
+	}
+
+	Reduct(&tmp, g, r);
+}
+
+
+void PowPolyHorner(bignum* a, bignum* c, bignum* g, bignum* r)
+{
+	int bits_c = MSB(c);
+
+	bignum tmp = { 0 };
+	tmp = SmallConstToBignum(1);
+
+	for (int i = bits_c; i >= 0; i--)
+	{
+		bignum temp = { 0 };
+		Square(&tmp, g, r);
+		Copy(r, &tmp);
+		if (GetBit(c, i) == 1)
+		{
+			XTime(a, &tmp, g, r);
+			Copy(r, &tmp);
+		}
+		
+	}
+
+	Reduct(&tmp, g, r);
+}
+
+void Inverse(bignum* a, bignum* g, bignum* r)
+{
+	bignum temp = StrToBinaryBignum("1");
+	bignum two = { 0 };
+	LongShiftBitsToHigh(&temp,MSB(g), &two);
+
+
+	bignum one = StrToBinaryBignum("2");
+	sub_result deg = SubBigNums(&two, &one);
+
+	PowPolyHorner(a, &deg.diff, g, &temp);
+	Reduct(&temp, g, r);
+}
