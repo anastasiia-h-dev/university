@@ -83,7 +83,7 @@ void Copy(bignum* src, bignum* dest);
 
 //############## LAB 3 #################
 void p2bf(char* poly, bignum* r);
-
+void bf2p(bignum* p);
 
 void PrintNumBin(bignum a);
 void AddPoly(bignum a, bignum b, bignum* result);
@@ -95,3 +95,4 @@ void XTime(bignum* a, bignum* b, bignum* g, bignum* r);
 void PowPoly(bignum* a, int c, bignum* g, bignum* r);
 void PowPolyHorner(bignum* a, bignum* c, bignum* g, bignum* r);
 void Inverse(bignum* a, bignum* g, bignum* r);
+void TestLab3(int num, bignum* g, int code);
